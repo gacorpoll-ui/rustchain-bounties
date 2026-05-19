@@ -5,11 +5,15 @@ on:
     - cron: '0 */6 * * *'  # Every 6 hours
   workflow_dispatch:        # Manual trigger
 
+permissions:
+  issues: write
+  contents: read
+  pull_requests: read
+  actions: read
+
 jobs:
   verify:
     runs-on: ubuntu-latest
-    permissions:
-      issues: write        # Post/update comments on issues
     steps:
       - uses: actions/checkout@v4
 
@@ -18,9 +22,14 @@ jobs:
           python-version: '3.12'
 
       - name: Install dependencies
-        run: pip install requests
+        run: |
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          else
+            pip install requests
+          fi
 
       - name: Run bounty verification
         run: python scripts/verify_bounties.py
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
