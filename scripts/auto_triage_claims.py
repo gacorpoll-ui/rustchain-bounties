@@ -553,19 +553,27 @@ def main() -> int:
 
     ledger_repo = os.environ.get("LEDGER_REPO", "").strip()
     ledger_issue = os.environ.get("LEDGER_ISSUE", "").strip()
+    gh_repo = os.environ.get("GITHUB_REPOSITORY", "").strip()
+    expected_repo = f"Scottcjn/{ledger_repo}" if ledger_repo else ""
     if ledger_repo and ledger_issue:
-        issue_path = f"/repos/Scottcjn/{ledger_repo}/issues/{int(ledger_issue)}"
-        ledger = _gh_request("GET", issue_path, token)
-        body = ledger.get("body") or ""
-        new_block = f"{MARKER_START}\n{report}\n{MARKER_END}"
-        if MARKER_START in body and MARKER_END in body:
-            start = body.index(MARKER_START)
-            end = body.index(MARKER_END) + len(MARKER_END)
-            updated = f"{body[:start]}{new_block}{body[end:]}"
+        if gh_repo and gh_repo != expected_repo:
+            print(f"\nSkipping ledger update: running in {gh_repo}, not {expected_repo}")
         else:
-            updated = f"{body}\n\n{new_block}\n"
-        _gh_request("PATCH", issue_path, token, data={"body": updated})
-        print(f"\nUpdated ledger issue: Scottcjn/{ledger_repo}#{ledger_issue}")
+            issue_path = f"/repos/Scottcjn/{ledger_repo}/issues/{int(ledger_issue)}"
+            try:
+                ledger = _gh_request("GET", issue_path, token)
+                body = ledger.get("body") or ""
+                new_block = f"{MARKER_START}\n{report}\n{MARKER_END}"
+                if MARKER_START in body and MARKER_END in body:
+                    start = body.index(MARKER_START)
+                    end = body.index(MARKER_END) + len(MARKER_END)
+                    updated = f"{body[:start]}{new_block}{body[end:]}"
+                else:
+                    updated = f"{body}\n\n{new_block}\n"
+                _gh_request("PATCH", issue_path, token, data={"body": updated})
+                print(f"\nUpdated ledger issue: Scottcjn/{ledger_repo}#{ledger_issue}")
+            except Exception as exc:
+                print(f"\nFailed to update ledger (non-fatal): {exc}", file=sys.stderr)
 
     return 0
 
